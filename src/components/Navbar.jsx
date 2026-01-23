@@ -215,6 +215,12 @@ const Navbar = () => {
                         label="Logs"
                         active={path === "/logs"}
                       />
+                      <NavLink
+                        path="/Form"
+                        icon={FileText}
+                        label="Form"
+                        active={path === "/Form"}
+                      />
                     </>
                   )}
                 </>
@@ -282,6 +288,13 @@ const Navbar = () => {
                       path="/logs"
                       label="Logs"
                       active={path === "/logs"}
+                      onClick={() => setOpen(false)}
+                    />
+
+                    <MobileNavLink
+                      path="/Form"
+                      label="Form"
+                      active={path === "/Form"}
                       onClick={() => setOpen(false)}
                     />
                   </>

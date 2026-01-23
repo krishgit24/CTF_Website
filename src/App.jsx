@@ -6,6 +6,7 @@ import ParticipantDashboard from "./pages/ParticipantDashboard";
 import AuthPage from "./pages/AuthPage";
 import Leaderboard from "./pages/Leaderboard";
 import Logs from "./pages/Logs"
+import Form from "./pages/Form"
 
 function App() {
   const [count, setCount] = useState(0);
@@ -19,6 +20,7 @@ function App() {
           <Route path="dashboard" element={<ParticipantDashboard />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/logs" element={<Logs />} />
+          <Route path="/Form" element={<Form />} />
         </Route>
       </Routes>
     </div>
