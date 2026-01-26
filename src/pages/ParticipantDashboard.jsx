@@ -49,25 +49,39 @@ const ParticipantDashboard = () => {
         return;
       }
 
-      // Fetch user's solved challenges
-      const { data: solvedChallenges, error } = await supabase
-        .from("user_challenges")
-        .select("challenge_id, points")
-        .eq("user_id", user.id)
-        .eq("solved", true);
+      // Fetch user's score from users table (SINGLE SOURCE OF TRUTH)
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("score")
+        .eq("id", user.id)
+        .single();
 
-      if (error) {
-        // Table might not exist yet, set to 0
-        console.log("user_challenges table not found, setting stats to 0");
+      if (userError) {
+        console.error("Error fetching user data:", userError);
         setUserStats({ totalScore: 0, solvedCount: 0 });
         return;
       }
 
-      const totalScore =
-        solvedChallenges?.reduce((sum, ch) => sum + (ch.points || 0), 0) || 0;
-      const solvedCount = solvedChallenges?.length || 0;
+      // Fetch count of solved challenges
+      const { data: solvedChallenges, error: solvedError } = await supabase
+        .from("user_challenges")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("solved", true);
 
-      setUserStats({ totalScore, solvedCount });
+      if (solvedError) {
+        console.log("user_challenges table error:", solvedError);
+        setUserStats({
+          totalScore: userData?.score || 0,
+          solvedCount: 0,
+        });
+        return;
+      }
+
+      setUserStats({
+        totalScore: userData?.score || 0,
+        solvedCount: solvedChallenges?.length || 0,
+      });
     } catch (error) {
       console.error("Error fetching user stats:", error);
       setUserStats({ totalScore: 0, solvedCount: 0 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, File, Flag, Download } from "lucide-react";
+import { X, Flag, Download } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
 const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
@@ -30,7 +30,23 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
       }
 
       // Check if flag is correct
-      if (flagInput.trim() !== challenge.flag.trim()) {
+      const isCorrect = flagInput.trim() === challenge.flag.trim();
+
+      // Log the submission (both correct and incorrect)
+      const { error: logError } = await supabase
+        .from("submission_logs")
+        .insert({
+          user_id: user.id,
+          challenge_id: challenge.id,
+          submitted_flag: flagInput.trim(),
+          is_correct: isCorrect,
+        });
+
+      if (logError) {
+        console.error("Error logging submission:", logError);
+      }
+
+      if (!isCorrect) {
         setMessage({ type: "error", text: "❌ Incorrect flag. Try again!" });
         setSubmitting(false);
         return;
