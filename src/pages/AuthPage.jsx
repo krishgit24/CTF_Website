@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
-/* ---------- Icons ---------- */
-
 const ShieldCheckIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -67,13 +65,12 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-/* ---------- Component ---------- */
-
 const AuthPage = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     teamName: "",
@@ -87,45 +84,30 @@ const AuthPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     try {
       if (!isLogin) {
-        // ========== SIGN UP ==========
-        
-        // Validate team name
         if (!formData.teamName.trim()) {
-          alert("Please enter a team name");
+          setError("Please enter a team name");
           setLoading(false);
           return;
         }
 
         if (formData.teamName.length < 3) {
-          alert("Team name must be at least 3 characters");
+          setError("Team name must be at least 3 characters");
           setLoading(false);
           return;
         }
 
-        console.log("📝 Starting signup process...");
-
-        // 1️⃣ Create auth user
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
         });
 
         if (signUpError) throw signUpError;
+        if (!authData?.user) throw new Error("Signup failed");
 
-        if (!authData?.user) {
-          throw new Error("Signup failed - no user created");
-        }
-
-        console.log("✅ Auth user created:", authData.user.id);
-
-        // 2️⃣ DIRECTLY INSERT into users table (bypass trigger issues)
-        // This uses INSERT with ON CONFLICT to handle both cases:
-        // - If trigger worked: Do nothing
-        // - If trigger failed: Insert the row
-        
         const { error: insertError } = await supabase
           .from("users")
           .insert({
@@ -137,66 +119,29 @@ const AuthPage = () => {
           .select()
           .single();
 
-        // If insert fails with duplicate key, that means trigger worked
-        // So we update instead
         if (insertError) {
           if (insertError.code === '23505') {
-            // Duplicate key - trigger already created the row, so UPDATE
-            console.log("ℹ️ Trigger created row, updating team_name...");
-            
-            const { error: updateError } = await supabase
+            await supabase
               .from("users")
               .update({ team_name: formData.teamName.trim() })
               .eq("id", authData.user.id);
-
-            if (updateError) {
-              console.error("❌ Update error:", updateError);
-              throw new Error("Failed to save team name");
-            }
           } else {
-            // Some other error
-            console.error("❌ Insert error:", insertError);
             throw insertError;
           }
         }
 
-        console.log("✅ User profile created with team name");
-
-        // 3️⃣ Verify it worked
-        const { data: verifyData, error: verifyError } = await supabase
-          .from("users")
-          .select("team_name, is_admin")
-          .eq("id", authData.user.id)
-          .single();
-
-        if (verifyError) {
-          console.error("❌ Verification failed:", verifyError);
-          throw new Error("Could not verify account. Please try logging in.");
-        }
-
-        console.log("✅ Verification successful:", verifyData);
-
-        // Success!
-        alert("Account created successfully! Welcome to IEEE CTF!");
         navigate("/dashboard");
-
       } else {
-        // ========== LOGIN ==========
-        console.log("🔐 Logging in...");
-        
         const { error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
 
         if (error) throw error;
-
-        console.log("✅ Login successful");
         navigate("/dashboard");
       }
     } catch (err) {
-      console.error("💥 Auth Error:", err);
-      alert(err.message || "An error occurred");
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -204,13 +149,11 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-black relative overflow-hidden p-4">
-      {/* Animated background gradient orbs */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-yellow-400/5 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      {/* Grid pattern overlay */}
       <div
         className="absolute inset-0 opacity-[0.02]"
         style={{
@@ -221,21 +164,9 @@ const AuthPage = () => {
       />
 
       <div className="w-full max-w-md relative z-10">
-        <div
-          className="
-            bg-gradient-to-b from-zinc-900/90 to-zinc-950/90
-            backdrop-blur-xl
-            border border-yellow-400/20 rounded-2xl p-8 sm:p-10
-            transition-all duration-500
-            hover:border-yellow-400/40
-            shadow-2xl shadow-yellow-400/5
-            hover:shadow-yellow-400/10
-          "
-        >
-          {/* Header */}
+        <div className="bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 backdrop-blur-xl border border-yellow-400/20 rounded-2xl p-8 sm:p-10 transition-all duration-500 hover:border-yellow-400/40 shadow-2xl shadow-yellow-400/5 hover:shadow-yellow-400/10">
           <div className="flex flex-col items-center mb-8">
             <div className="relative">
-              {/* Glowing effect behind icon */}
               <div className="absolute inset-0 bg-yellow-400/20 blur-xl rounded-full animate-pulse" />
               <div className="relative flex items-center gap-3 bg-zinc-900/50 px-5 py-3 rounded-full border border-yellow-400/30">
                 <ShieldCheckIcon />
@@ -255,7 +186,6 @@ const AuthPage = () => {
             </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div className="animate-fadeIn">
@@ -267,13 +197,7 @@ const AuthPage = () => {
                   value={formData.teamName}
                   onChange={handleChange}
                   placeholder="Enter your team name"
-                  className="
-                    w-full bg-zinc-900/50 px-4 py-3.5 rounded-xl
-                    border border-zinc-700/50 text-gray-100 placeholder-gray-600
-                    hover:border-yellow-400/40
-                    focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20
-                    transition-all duration-200
-                  "
+                  className="w-full bg-zinc-900/50 px-4 py-3.5 rounded-xl border border-zinc-700/50 text-gray-100 placeholder-gray-600 hover:border-yellow-400/40 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-200"
                   required
                 />
               </div>
@@ -289,13 +213,7 @@ const AuthPage = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="
-                  w-full bg-zinc-900/50 px-4 py-3.5 rounded-xl
-                  border border-zinc-700/50 text-gray-100 placeholder-gray-600
-                  hover:border-yellow-400/40
-                  focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20
-                  transition-all duration-200
-                "
+                className="w-full bg-zinc-900/50 px-4 py-3.5 rounded-xl border border-zinc-700/50 text-gray-100 placeholder-gray-600 hover:border-yellow-400/40 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-200"
                 required
               />
             </div>
@@ -311,44 +229,28 @@ const AuthPage = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className="
-                    w-full bg-zinc-900/50 px-4 py-3.5 rounded-xl pr-12
-                    border border-zinc-700/50 text-gray-100 placeholder-gray-600
-                    hover:border-yellow-400/40
-                    focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20
-                    transition-all duration-200
-                  "
+                  className="w-full bg-zinc-900/50 px-4 py-3.5 rounded-xl pr-12 border border-zinc-700/50 text-gray-100 placeholder-gray-600 hover:border-yellow-400/40 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-200"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="
-                    absolute right-3 top-1/2 -translate-y-1/2
-                    p-2 rounded-lg
-                    hover:bg-yellow-400/10
-                    transition-colors duration-200
-                  "
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-yellow-400/10 transition-colors duration-200"
                 >
                   <EyeIcon visible={showPassword} />
                 </button>
               </div>
             </div>
 
+            {error && (
+              <div className="p-3 rounded-lg bg-red-900/50 text-red-300 border border-red-500/30 text-sm">
+                {error}
+              </div>
+            )}
+
             <button
               disabled={loading}
-              className="
-                w-full bg-gradient-to-r from-yellow-400 to-yellow-500
-                text-black py-3.5 rounded-xl mt-6
-                font-bold text-base
-                transition-all duration-200
-                hover:from-yellow-300 hover:to-yellow-400
-                hover:shadow-lg hover:shadow-yellow-400/25
-                hover:-translate-y-0.5
-                active:translate-y-0
-                disabled:opacity-60 disabled:cursor-not-allowed
-                disabled:hover:translate-y-0
-              "
+              className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-black py-3.5 rounded-xl mt-6 font-bold text-base transition-all duration-200 hover:from-yellow-300 hover:to-yellow-400 hover:shadow-lg hover:shadow-yellow-400/25 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -378,7 +280,6 @@ const AuthPage = () => {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-zinc-800" />
@@ -390,19 +291,11 @@ const AuthPage = () => {
             </div>
           </div>
 
-          {/* Switch */}
           <div className="text-center">
             <button
               onClick={() => setIsLogin(!isLogin)}
               disabled={loading}
-              className="
-                group
-                text-sm text-gray-400
-                hover:text-yellow-400
-                transition-colors duration-200
-                font-medium
-                disabled:opacity-50 disabled:cursor-not-allowed
-              "
+              className="group text-sm text-gray-400 hover:text-yellow-400 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLogin
                 ? "No account? Register your team"

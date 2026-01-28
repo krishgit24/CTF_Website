@@ -15,10 +15,7 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
     setMessage({ type: "", text: "" });
 
     try {
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
         setMessage({
@@ -29,22 +26,14 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
         return;
       }
 
-      // Check if flag is correct
       const isCorrect = flagInput.trim() === challenge.flag.trim();
 
-      // Log the submission (both correct and incorrect)
-      const { error: logError } = await supabase
-        .from("submission_logs")
-        .insert({
-          user_id: user.id,
-          challenge_id: challenge.id,
-          submitted_flag: flagInput.trim(),
-          is_correct: isCorrect,
-        });
-
-      if (logError) {
-        console.error("Error logging submission:", logError);
-      }
+      await supabase.from("submission_logs").insert({
+        user_id: user.id,
+        challenge_id: challenge.id,
+        submitted_flag: flagInput.trim(),
+        is_correct: isCorrect,
+      });
 
       if (!isCorrect) {
         setMessage({ type: "error", text: "❌ Incorrect flag. Try again!" });
@@ -52,7 +41,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
         return;
       }
 
-      // Check if already solved
       const { data: existing } = await supabase
         .from("user_challenges")
         .select("*")
@@ -69,7 +57,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
         return;
       }
 
-      // Mark as solved
       const { error } = await supabase.from("user_challenges").upsert({
         user_id: user.id,
         challenge_id: challenge.id,
@@ -86,7 +73,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
       });
       setFlagInput("");
 
-      // Refresh stats in parent
       if (onSolve) {
         setTimeout(() => {
           onSolve();
@@ -94,7 +80,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
         }, 2000);
       }
     } catch (error) {
-      console.error("Error submitting flag:", error);
       setMessage({
         type: "error",
         text: "Error submitting flag. Please try again.",
@@ -113,7 +98,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
         className="relative w-full max-w-2xl max-h-[90vh] bg-gradient-to-b from-zinc-900 to-black border-2 border-yellow-400 rounded-lg p-6 shadow-2xl overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* HEADER */}
         <div className="flex justify-between items-start mb-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -124,10 +108,8 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
                 {challenge.points} pts
               </span>
             </div>
-
             <h2 className="text-2xl font-bold">{challenge.title}</h2>
           </div>
-
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-yellow-400 transition-colors"
@@ -136,12 +118,10 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
           </button>
         </div>
 
-        {/* DESCRIPTION */}
         <p className="text-sm text-gray-400 mb-6 leading-relaxed">
           {challenge.description || "No description available"}
         </p>
 
-        {/* RESOURCES */}
         {challenge.resource_link && (
           <div className="border border-yellow-500/30 rounded-lg p-4 mb-6">
             <p className="text-xs text-yellow-400 mb-3 font-semibold">RESOURCES</p>
@@ -161,7 +141,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
           </div>
         )}
 
-        {/* META */}
         <div className="flex items-center gap-6 text-xs text-gray-500 mb-6">
           <span>
             🏆 SOLVES: <span className="text-gray-300">0</span>
@@ -174,7 +153,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
           </span>
         </div>
 
-        {/* SUBMIT FORM */}
         <form onSubmit={handleSubmitFlag}>
           <div className="mb-4">
             <p className="text-xs text-gray-400 mb-2">SUBMIT FLAG</p>
@@ -200,7 +178,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
             </div>
           </div>
 
-          {/* MESSAGE */}
           {message.text && (
             <div
               className={`p-3 rounded-lg text-sm font-semibold mb-4 ${
@@ -216,7 +193,6 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
           )}
         </form>
 
-        {/* FOOTER */}
         <div className="flex justify-between text-[10px] text-gray-500 mt-6">
           <div>SECURE CONNECTION ACTIVE</div>
           <div>CHAL_ID: {challenge.id.slice(0, 8)}</div>

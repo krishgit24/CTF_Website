@@ -16,13 +16,11 @@ const Form = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [challenges, setChallenges] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    // Filtering & Pagination State
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("ALL");
     const [currentPage, setCurrentPage] = useState(1);
+    const [message, setMessage] = useState({ type: "", text: "" });
 
-    // ============ FETCH CHALLENGES ON MOUNT ============
     useEffect(() => {
         fetchChallenges();
     }, []);
@@ -36,17 +34,13 @@ const Form = () => {
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
-
             setChallenges(data || []);
         } catch (error) {
-            console.error("Error fetching challenges:", error);
-            alert("Failed to fetch challenges");
+            setMessage({ type: "error", text: "Failed to fetch challenges" });
         } finally {
             setLoading(false);
         }
     };
-
-    // ============ FILTERED & PAGINATED DATA ============
 
     const filteredChallenges = useMemo(() => {
         return challenges.filter((challenge) => {
@@ -65,7 +59,6 @@ const Form = () => {
         currentPage * ITEMS_PER_PAGE
     );
 
-    // Reset to page 1 when filters change
     const handleSearchChange = (value) => {
         setSearchQuery(value);
         setCurrentPage(1);
@@ -76,8 +69,6 @@ const Form = () => {
         setCurrentPage(1);
     };
 
-    // ============ FORM HANDLERS ============
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
@@ -86,6 +77,7 @@ const Form = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setMessage({ type: "", text: "" });
 
         try {
             const { data, error } = await supabase.from("challenges").insert([
@@ -101,10 +93,7 @@ const Form = () => {
 
             if (error) throw error;
 
-            // Add the new challenge to the local state
             setChallenges((prev) => [data[0], ...prev]);
-
-            // Reset form
             setFormData({
                 title: "",
                 category: "",
@@ -113,11 +102,9 @@ const Form = () => {
                 resource_link: "",
                 flag: "",
             });
-
-            alert("Challenge added successfully! ✅");
+            setMessage({ type: "success", text: "Challenge added successfully!" });
         } catch (error) {
-            console.error("Error adding challenge:", error);
-            alert("Failed to add challenge: " + error.message);
+            setMessage({ type: "error", text: "Failed to add challenge" });
         } finally {
             setIsSubmitting(false);
         }
@@ -135,20 +122,16 @@ const Form = () => {
                 .eq("id", id);
 
             if (error) throw error;
-
-            // Remove from local state
             setChallenges((prev) => prev.filter((c) => c.id !== id));
-            alert("Challenge deleted successfully! 🗑️");
         } catch (error) {
-            console.error("Error deleting challenge:", error);
-            alert("Failed to delete challenge: " + error.message);
+            setMessage({ type: "error", text: "Failed to delete challenge" });
         }
     };
 
     if (loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="text-yellow-400 text-2xl">Loading challenges...</div>
+                <div className="text-yellow-400 text-2xl">Loading...</div>
             </div>
         );
     }
@@ -156,7 +139,6 @@ const Form = () => {
     return (
         <div className="min-h-screen bg-black px-4 py-8">
             <div className="max-w-5xl mx-auto">
-                {/* Header */}
                 <div className="text-center mb-10">
                     <span className="block text-sm tracking-[0.3em] text-gray-400 mb-2">
                         ADMIN PANEL
@@ -166,14 +148,12 @@ const Form = () => {
                     </h1>
                 </div>
 
-                {/* Add Challenge Form */}
                 <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-2 border-gray-800 rounded-2xl p-6 md:p-8 mb-8">
                     <h2 className="text-xl font-bold text-yellow-400 mb-6 flex items-center gap-2">
                         <span>➕</span> Add New Challenge
                     </h2>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Title */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-2">
                                 Challenge Title *
@@ -189,7 +169,6 @@ const Form = () => {
                             />
                         </div>
 
-                        {/* Category & Points Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm text-gray-400 mb-2">
@@ -228,7 +207,6 @@ const Form = () => {
                             </div>
                         </div>
 
-                        {/* Description */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-2">
                                 Description *
@@ -244,7 +222,6 @@ const Form = () => {
                             />
                         </div>
 
-                        {/* Resource Link */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-2">
                                 Resource / Drive Link
@@ -254,15 +231,11 @@ const Form = () => {
                                 name="resource_link"
                                 value={formData.resource_link}
                                 onChange={handleInputChange}
-                                placeholder="https://drive.google.com/... (optional, add later if needed)"
+                                placeholder="https://drive.google.com/..."
                                 className="w-full px-4 py-3 bg-black border-2 border-gray-700 rounded-lg text-white focus:outline-none focus:border-yellow-500 transition-colors placeholder:text-gray-600"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                💡 You can leave this empty now and add the link later
-                            </p>
                         </div>
 
-                        {/* Flag (Secret) */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-2">
                                 Flag (Secret Answer) *
@@ -278,7 +251,18 @@ const Form = () => {
                             />
                         </div>
 
-                        {/* Submit Button */}
+                        {message.text && (
+                            <div
+                                className={`p-3 rounded-lg text-sm ${
+                                    message.type === "success"
+                                        ? "bg-green-900/50 text-green-300"
+                                        : "bg-red-900/50 text-red-300"
+                                }`}
+                            >
+                                {message.text}
+                            </div>
+                        )}
+
                         <button
                             type="submit"
                             disabled={isSubmitting}
@@ -289,7 +273,6 @@ const Form = () => {
                     </form>
                 </div>
 
-                {/* Existing Challenges List */}
                 <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-2 border-gray-800 rounded-2xl p-6 md:p-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                         <h2 className="text-xl font-bold text-yellow-400 flex items-center gap-2">
@@ -300,9 +283,7 @@ const Form = () => {
                         </h2>
                     </div>
 
-                    {/* Search & Filter Bar */}
                     <div className="flex flex-col md:flex-row gap-4 mb-6">
-                        {/* Search */}
                         <div className="flex-1 relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                                 🔍
@@ -316,7 +297,6 @@ const Form = () => {
                             />
                         </div>
 
-                        {/* Category Filter */}
                         <div className="flex flex-wrap gap-2">
                             {CATEGORIES.map((cat) => (
                                 <button
@@ -334,7 +314,6 @@ const Form = () => {
                         </div>
                     </div>
 
-                    {/* Challenges Grid */}
                     {paginatedChallenges.length === 0 ? (
                         <div className="text-center py-12 border-2 border-dashed border-gray-800 rounded-xl">
                             <span className="text-4xl block mb-3">🎯</span>
@@ -352,7 +331,6 @@ const Form = () => {
                                         key={challenge.id}
                                         className="group relative bg-gradient-to-br from-gray-900 to-black border-2 border-gray-800 rounded-xl p-5 hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10"
                                     >
-                                        {/* Category & Points Header */}
                                         <div className="flex items-center justify-between mb-3">
                                             <span className="px-2 py-1 text-[10px] font-bold tracking-wider bg-purple-900/60 text-purple-300 border border-purple-500/30 rounded-full truncate max-w-[100px]">
                                                 {challenge.category}
@@ -362,17 +340,14 @@ const Form = () => {
                                             </span>
                                         </div>
 
-                                        {/* Title */}
                                         <h3 className="text-base font-bold text-white font-mono mb-2 group-hover:text-yellow-400 transition-colors truncate">
                                             {challenge.title}
                                         </h3>
 
-                                        {/* Description */}
                                         <p className="text-gray-500 text-xs leading-relaxed mb-4 line-clamp-2">
                                             {challenge.description}
                                         </p>
 
-                                        {/* Resources indicator */}
                                         {challenge.resource_link && (
                                             <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
                                                 <span>🔗</span>
@@ -380,7 +355,6 @@ const Form = () => {
                                             </div>
                                         )}
 
-                                        {/* Actions */}
                                         <div className="flex items-center justify-between pt-3 border-t border-gray-800">
                                             <div className="flex items-center gap-2 text-xs text-gray-600">
                                                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
@@ -397,7 +371,6 @@ const Form = () => {
                                 ))}
                             </div>
 
-                            {/* Pagination */}
                             {totalPages > 1 && (
                                 <div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-800">
                                     <button

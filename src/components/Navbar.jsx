@@ -16,54 +16,32 @@ import { supabase } from "../supabaseClient";
 const Navbar = () => {
   const path = useLocation().pathname;
   const navigate = useNavigate();
-
   const [open, setOpen] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  /* ---------- AUTH STATE ---------- */
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const { data: authData, error: authError } = await supabase.auth.getUser();
 
-        console.log("🔍 Auth Check:", { 
-          hasUser: !!authData?.user, 
-          userId: authData?.user?.id,
-          error: authError 
-        });
-
-        // If there's an auth error or no user, clear everything
         if (authError || !authData?.user) {
-          console.log("❌ No user found, clearing state");
           setIsLoggedIn(false);
           setTeamName("");
           setIsAdmin(false);
           return;
         }
 
-        console.log("✅ User authenticated:", authData.user.email);
         setIsLoggedIn(true);
 
-        // Try to fetch user data from database
         const { data, error: dbError } = await supabase
           .from("users")
           .select("team_name, is_admin")
           .eq("id", authData.user.id)
           .single();
 
-        console.log("🔍 Database Check:", { 
-          hasData: !!data, 
-          teamName: data?.team_name,
-          isAdmin: data?.is_admin,
-          error: dbError 
-        });
-
-        // If user was deleted from database but session still exists
-        if (dbError) {
-          console.error("❌ User not found in database:", dbError);
-          console.log("🧹 Clearing session for deleted user");
+        if (dbError || !data) {
           await supabase.auth.signOut();
           setIsLoggedIn(false);
           setTeamName("");
@@ -71,28 +49,9 @@ const Navbar = () => {
           return;
         }
 
-        if (!data) {
-          console.error("❌ No data returned from database");
-          await supabase.auth.signOut();
-          setIsLoggedIn(false);
-          setTeamName("");
-          setIsAdmin(false);
-          return;
-        }
-
-        // Set user data
         setTeamName(data.team_name || "");
         setIsAdmin(data.is_admin || false);
-        
-        console.log("✅ User state updated:", {
-          teamName: data.team_name,
-          isAdmin: data.is_admin,
-          isLoggedIn: true
-        });
-
       } catch (error) {
-        console.error("💥 Error fetching user:", error);
-        // On any error, clear the session
         await supabase.auth.signOut();
         setIsLoggedIn(false);
         setTeamName("");
@@ -103,16 +62,10 @@ const Navbar = () => {
     fetchUser();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("🔄 Auth state changed:", event, { hasSession: !!session });
-      
       if (event === 'SIGNED_OUT' || !session) {
-        console.log("👋 User signed out");
         setIsLoggedIn(false);
         setTeamName("");
         setIsAdmin(false);
-      } else if (event === 'SIGNED_IN') {
-        console.log("👋 User signed in");
-        fetchUser();
       } else {
         fetchUser();
       }
@@ -121,37 +74,16 @@ const Navbar = () => {
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
-  /* ---------- LOGOUT ---------- */
   const handleLogout = async () => {
     try {
-      console.log("🚪 Logging out...");
-      
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("❌ Logout error:", error);
-      } else {
-        console.log("✅ Signed out from Supabase");
-      }
-      
-      // Clear all local state
+      await supabase.auth.signOut();
       setIsLoggedIn(false);
       setTeamName("");
       setIsAdmin(false);
       setOpen(false);
-      
-      // Clear localStorage
       localStorage.clear();
-      console.log("✅ Cleared localStorage");
-      
-      // Navigate to home
       navigate("/");
-      console.log("✅ Navigated to home");
-      
     } catch (error) {
-      console.error("💥 Error during logout:", error);
-      // Force logout even if there's an error
       setIsLoggedIn(false);
       setTeamName("");
       setIsAdmin(false);
@@ -161,21 +93,11 @@ const Navbar = () => {
     }
   };
 
-  // Debug: Log current state on every render
-  console.log("🎨 Navbar Render:", { 
-    isLoggedIn, 
-    teamName, 
-    isAdmin,
-    path 
-  });
-
   return (
     <>
       <nav className="sticky top-0 z-50 bg-black/95 backdrop-blur-xl border-b border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between h-16">
-
-            {/* LOGO */}
             <div
               onClick={() => navigate("/")}
               className="flex items-center gap-2 cursor-pointer group"
@@ -186,7 +108,6 @@ const Navbar = () => {
               </span>
             </div>
 
-            {/* CENTER NAV */}
             <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
               {!isLoggedIn && (
                 <NavLink path="/" icon={Home} label="Home" active={path === "/"} />
@@ -227,7 +148,6 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* RIGHT SIDE - SHOW LOGOUT IF LOGGED IN */}
             <div className="hidden lg:flex items-center gap-4">
               {isLoggedIn && (
                 <>
@@ -243,7 +163,6 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* MOBILE TOGGLE */}
             <button
               onClick={() => setOpen(!open)}
               className="lg:hidden text-gray-400 hover:text-yellow-400"
@@ -254,7 +173,6 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* MOBILE MENU */}
       {open && (
         <div className="lg:hidden fixed inset-0 top-16 bg-black/95 backdrop-blur-xl z-40">
           <div className="p-4 space-y-2">
@@ -290,7 +208,6 @@ const Navbar = () => {
                       active={path === "/logs"}
                       onClick={() => setOpen(false)}
                     />
-
                     <MobileNavLink
                       path="/Form"
                       label="Form"
@@ -319,7 +236,6 @@ const Navbar = () => {
   );
 };
 
-/* ---------- TEAM BADGE ---------- */
 const TeamBadge = ({ teamName, mobile = false }) => (
   <div className={`relative ${mobile ? "w-full" : ""}`}>
     <div className="bg-zinc-900 border border-yellow-400/30 rounded-lg px-4 py-2 flex items-center gap-3">
@@ -331,7 +247,6 @@ const TeamBadge = ({ teamName, mobile = false }) => (
   </div>
 );
 
-/* ---------- LINKS ---------- */
 const NavLink = ({ path, icon: Icon, label, active }) => {
   const navigate = useNavigate();
   return (
