@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Trophy, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trophy, Users, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
 const ITEMS_PER_PAGE = 10;
@@ -133,8 +133,17 @@ const Leaderboard = () => {
                   <div className="col-span-5 flex items-center gap-3">
                     <TeamAvatar name={team.team_name || "Team"} />
                     <div>
-                      <div className="font-semibold text-white">
-                        {team.team_name || "Unnamed Team"}
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-white">
+                          {team.team_name || "Unnamed Team"}
+                        </span>
+                        {/* Admin Badge */}
+                        {team.is_admin && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded-full text-[10px] font-bold">
+                            <Shield className="w-3 h-3" />
+                            ADMIN
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -180,6 +189,13 @@ const Leaderboard = () => {
                     <div className="font-semibold text-white text-sm">
                       {team.team_name || "Unnamed Team"}
                     </div>
+                    {/* Admin Badge */}
+                    {team.is_admin && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded-full text-[9px] font-bold mt-1">
+                        <Shield className="w-2.5 h-2.5" />
+                        ADMIN
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
