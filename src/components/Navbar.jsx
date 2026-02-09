@@ -9,6 +9,7 @@ import {
   Crown,
   LogOut,
 } from "lucide-react";
+import logo from "../assets/logo1.jpg";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
@@ -102,7 +103,11 @@ const Navbar = () => {
               onClick={() => navigate("/")}
               className="flex items-center gap-2 cursor-pointer group"
             >
-              <ShieldCheck className="w-8 h-8 text-yellow-400 group-hover:rotate-3 transition" />
+              <img
+                src={logo}
+                alt="IEEE CTF logo"
+                className="w-8 h-8 object-contain transform group-hover:rotate-3 transition-transform"
+              />
               <span className="text-xl font-bold text-white">
                 IEEE <span className="text-yellow-400">CTF</span>
               </span>

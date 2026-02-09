@@ -143,10 +143,7 @@ const ChallengeModal = ({ isOpen, onClose, challenge, onSolve }) => {
 
         <div className="flex items-center gap-6 text-xs text-gray-500 mb-6">
           <span>
-            🏆 SOLVES: <span className="text-gray-300">0</span>
-          </span>
-          <span>
-            📅 CREATED:{" "}
+            📅 CREATED: 
             <span className="text-gray-300">
               {new Date(challenge.created_at).toLocaleDateString()}
             </span>
